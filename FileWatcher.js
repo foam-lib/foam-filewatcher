@@ -123,7 +123,7 @@ export default class FileWatcher{
                 }
                 //file removed
                 else if(status === 404){
-                    file.dispatchEvent(new FileEvent(file,FileEvent.FILE_REMOVED));
+                    file.dispatchEvent(new FileEvent(FileEvent.FILE_REMOVED));
                     self._watchesInvalid.push(watch_);
                     onWatchProcessed();
                 }
@@ -161,15 +161,14 @@ export default class FileWatcher{
             if(this.readyState != 4){
                 return;
             }
-            var status = this.status;
+            const status = this.status;
             if(status == 200){
-                var file, time;
 
-                file = new File(path);
+                const file = new File(path);
                 if(callbackNotValid){
                     file.addEventListener(FileEvent.FILE_NOT_VALID,callbackNotValid);
                 }
-                time = new Date(request.getResponseHeader('Last-Modified'));
+                const time = new Date(request.getResponseHeader('Last-Modified'));
                 //file not valid
                 if(time.toString() == 'Invalid Date'){
                     if(file.hasEventListener(FileEvent.FILE_NOT_VALID)){
@@ -200,6 +199,7 @@ export default class FileWatcher{
                 console.log('File does not exist. File: ' + path);
             }
         });
+
         request.send();
     }
 
