@@ -3,6 +3,8 @@ import FileEvent from './FileEvent';
 
 const DEFAULT_WATCH_DELAY = 500;
 
+const noop = ()=>{};
+
 export default class FileWatcher{
     /**
      * FileWatcher
@@ -64,12 +66,19 @@ export default class FileWatcher{
     /**
      * Adds a file to watch.
      * @param path
-     * @param callbackModified
-     * @param callbackAdded
-     * @param callbackRemoved
-     * @param callbackNotValid
+     * @param config
+     // * @param callbackModified
+     // * @param callbackAdded
+     // * @param callbackRemoved
+     // * @param callbackNotValid
      */
-    addFile(path,callbackModified,callbackAdded,callbackRemoved,callbackNotValid){
+    addFile(path,config){
+        const onChange = config.onChange || noop;
+        const onAdded    = config.onAdded || noop;
+        const onRemoved  = config.onModified || noop;
+        const onNotValid = config.onNotValid || noop;
+        const type = config.type || 'text';
+
         if(this.hasFile(path)){
             return;
         }
@@ -104,9 +113,7 @@ export default class FileWatcher{
                     const time = new Date(request.getResponseHeader('Last-Modified'));
                     //error
                     if(time.toString() == 'Invalid Date'){
-                        if(file.hasEventListener(FileEvent.FILE_NOT_VALID)){
-                            file.dispatchEvent(new FileEvent(FileEvent.FILE_NOT_VALID));
-                        }
+                        file.emit(FileEvent.FILE_NOT_VALID);
                         return;
                     }
                     //no change
@@ -115,7 +122,19 @@ export default class FileWatcher{
                     }
                     //file touched
                     if(time > file.timeModifiedNew){
-                        file.dispatchEvent(new FileEvent(FileEvent.FILE_MODIFIED,this.responseText));
+                        switch(type){
+                            case 'image' :
+                                const image = new Image();
+                                image.onload = ()=>{
+                                    file.emit(FileEvent.FILE_MODIFIED,{data:image});
+                                };
+                                image.src = file.path;
+                                break;
+                            case 'text' :
+                            default :
+                                file.emit(FileEvent.FILE_MODIFIED,{data:this.responseText});
+                                break;
+                        }
                         file.timeModifiedOld = file.timeModifiedNew;
                         file.timeModifiedNew = time;
                     }
@@ -123,7 +142,7 @@ export default class FileWatcher{
                 }
                 //file removed
                 else if(status === 404){
-                    file.dispatchEvent(new FileEvent(FileEvent.FILE_REMOVED));
+                    file.emit(FileEvent.FILE_REMOVED);
                     self._watchesInvalid.push(watch_);
                     onWatchProcessed();
                 }
@@ -144,10 +163,10 @@ export default class FileWatcher{
                 }
                 const status = this.status;
                 if(status === 200){
-                    file.dispatchEvent(new FileEvent(FileEvent.FILE_ADDED,request.responseText));
+                    file.emit(FileEvent.FILE_ADDED,{data:this.responseText});
                     watch(file);
                 } else if(status === 404){
-                    file.dispatchEvent(new FileEvent(FileEvent.FILE_REMOVED));
+                    file.emit(FileEvent.FILE_REMOVED);
                 }
             });
             request.send();
@@ -165,35 +184,36 @@ export default class FileWatcher{
             if(status == 200){
 
                 const file = new File(path);
-                if(callbackNotValid){
-                    file.addEventListener(FileEvent.FILE_NOT_VALID,callbackNotValid);
+                if(onNotValid){
+                    file.on(FileEvent.FILE_NOT_VALID,onNotValid);
                 }
+                // if(callbackNotValid){
+                //     file.addEventListener(FileEvent.FILE_NOT_VALID,callbackNotValid);
+                // }
                 const time = new Date(request.getResponseHeader('Last-Modified'));
                 //file not valid
                 if(time.toString() == 'Invalid Date'){
-                    if(file.hasEventListener(FileEvent.FILE_NOT_VALID)){
-                        file.dispatchEvent(new FileEvent(FileEvent.FILE_NOT_VALID));
-                    }
+                    file.emit(FileEvent.FILE_NOT_VALID);
                 }
                 //add initial time
                 file.timeModifiedNew = time;
 
                 //add listener
-                if(callbackAdded){
-                    file.addEventListener(FileEvent.FILE_ADDED,callbackAdded);
+                if(onAdded){
+                    file.on(FileEvent.FILE_ADDED,onAdded);
                 }
-                if(callbackModified){
-                    file.addEventListener(FileEvent.FILE_MODIFIED,callbackModified);
+                if(onChange){
+                    file.on(FileEvent.FILE_MODIFIED,onChange);
                 }
-                if(callbackRemoved){
-                    file.addEventListener(FileEvent.FILE_REMOVED,callbackRemoved);
+                if(onRemoved){
+                    file.on(FileEvent.FILE_REMOVED,onRemoved);
                 }
 
                 addFile(file);
 
             } else if(status == 404){
-                if(callbackNotValid){
-                    callbackNotValid();
+                if(onNotValid){
+                    onNotValid();
                     return;
                 }
                 console.log('File does not exist. File: ' + path);
