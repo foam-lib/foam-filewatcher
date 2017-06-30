@@ -1,12 +1,8 @@
-import Event from 'foam-event/Event';
+const FileEvent = Object.freeze({
+    FILE_ADDED : 'file-added',
+    FILE_MODIFIED : 'file-modified',
+    FILE_REMOVED : 'file-removed',
+    FILE_NOT_VALID : 'file-not-valid'
+});
 
-export default class FileEvent extends Event{
-    constructor(type,data){
-        super(type,data);
-    }
-}
-
-FileEvent.FILE_ADDED = 'fileadded';
-FileEvent.FILE_MODIFIED = 'filemodified';
-FileEvent.FILE_REMOVED = 'fileremoved';
-FileEvent.FILE_NOT_VALID = 'filenotvalid';
+export default FileEvent;
